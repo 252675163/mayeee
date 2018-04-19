@@ -36,6 +36,9 @@ module.exports = {
       '@': resolve('src'),
     }
   },
+  externals:{
+
+  },
   module: {
     rules: [
       ...(config.dev.useEslint ? [createLintingRule()] : []),
@@ -43,7 +46,7 @@ module.exports = {
         test: /\.vue$/,
         loader: 'vue-loader',
         options: vueLoaderConfig
-      },
+	  },
       {
         test: /\.js$/,
         loader: 'babel-loader',

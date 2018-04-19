@@ -28,7 +28,8 @@ const devWebpackConfig = merge(baseWebpackConfig, {
 
   // these devServer options should be customized in /config/index.js
   devServer: {
-    clientLogLevel: 'warning',
+	clientLogLevel: 'warning',
+	disableHostCheck:config.dev.disableHostCheck,
     // historyApiFallback: {
     //   rewrites: [
     //     { from: /.*/, to: path.posix.join(config.dev.assetsPublicPath, 'index.html') },
@@ -37,7 +38,8 @@ const devWebpackConfig = merge(baseWebpackConfig, {
     hot: true,
     contentBase: false, // since we use CopyWebpackPlugin.
     compress: true,
-    host: HOST || config.dev.host,
+	host: config.dev.host || HOST,
+    // host: '0.0.0.0',
     port: PORT || config.dev.port,
     open: config.dev.autoOpenBrowser,
     overlay: config.dev.errorOverlay ?
@@ -47,7 +49,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
       } :
       false,
     publicPath: config.dev.assetsPublicPath,
-    proxy: config.dev.proxyTable,
+    proxy:  config.dev.isUseMock?config.dev.proxyTable:{"/":config.dev.proxyServer},
     quiet: true, // necessary for FriendlyErrorsPlugin
     watchOptions: {
       poll: config.dev.poll,
@@ -60,6 +62,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
     new webpack.HotModuleReplacementPlugin(),
     new webpack.NamedModulesPlugin(), // HMR shows correct file names in console on update.
     new webpack.NoEmitOnErrorsPlugin(),
+    new webpack.HashedModuleIdsPlugin(),
     // https://github.com/ampedandwired/html-webpack-plugin
     // new HtmlWebpackPlugin({
     //   filename: 'html/index.html',
@@ -71,27 +74,23 @@ const devWebpackConfig = merge(baseWebpackConfig, {
       from: path.resolve(__dirname, '../static'),
       to: config.dev.assetsSubDirectory,
       ignore: ['.*']
-    }])
+	}]),
+	new HtmlWebpackPlugin({
+		filename: path.join(__dirname,"./../dist/index.html"),
+		template: path.join(__dirname,"./../index.html"),
+		inject: true
+	})
   ]
 })
-var htmlWebpackPlugins = [];
-Object.keys(devWebpackConfig.entry).forEach(function (name) {
-  console.log(name);
-  htmlWebpackPlugins.push(new HtmlWebpackPlugin({
-    filename: name+".html",
-    template: 'index.html',
-    inject: true
-  }));
 
-});
-devWebpackConfig.plugins = devWebpackConfig.plugins.concat(htmlWebpackPlugins);
+var initDevserver = require("./my-mock");
 
-Object.keys(devWebpackConfig.entry).forEach(function (name) {
-  devWebpackConfig.entry[name] = []
-    .concat(config.dev.isUseMock ? ["./build/my-mock"] : [])
-    .concat(devWebpackConfig.entry[name])
-    .concat(config.dev.isUseMock ? mockEntry.entry : []);
-});
+// Object.keys(devWebpackConfig.entry).forEach(function (name) {
+//   devWebpackConfig.entry[name] = []
+//     // .concat(config.dev.isUseMock ? ["./build/my-mock"] : [])
+//     .concat(devWebpackConfig.entry[name])
+//     .concat(config.dev.isUseMock ? mockEntry.entry : []);
+// });
 
 
 module.exports = new Promise((resolve, reject) => {
@@ -104,6 +103,10 @@ module.exports = new Promise((resolve, reject) => {
       process.env.PORT = port
       // add port to devServer config
       devWebpackConfig.devServer.port = port
+
+      if(config.dev.isUseMock){
+        initDevserver();
+      }
 
       // Add FriendlyErrorsPlugin
       devWebpackConfig.plugins.push(new FriendlyErrorsPlugin({
